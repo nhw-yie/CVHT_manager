@@ -1,0 +1,22 @@
+// Barrel file exporting all models for easier imports
+export 'student.dart';
+export 'advisor.dart';
+export 'notification_model.dart';
+export 'activity.dart';
+export 'activity_role.dart';
+export 'activity_registration.dart';
+export 'message.dart';
+export 'user.dart';
+export 'unit.dart';
+export 'class_model.dart';
+export 'semester.dart';
+export 'course.dart';
+export 'course_grade.dart';
+export 'semester_report.dart';
+export 'academic_warning.dart';
+export 'point_feedback.dart';
+export 'cancellation_request.dart';
+export 'meeting.dart';
+export 'meeting_student.dart';
+export 'meeting_feedback.dart';
+export 'student_monitoring_note.dart';
