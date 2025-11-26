@@ -5,13 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../providers/notifications_provider.dart';
 import '../providers/notification_provider_student.dart';
-import 'student_screens/home_screens/student_home_screen.dart';
-import 'student_screens/notification_screens/notifications_list_screen.dart';
-import 'student_screens/activity_screens/activities_list_screen.dart';
-import 'chat_screen.dart';
-import 'student_screens/student_profile_screen.dart';
-import 'advisor_screens/advisor_home_screen.dart';
-import 'advisor_screens/students_manager_screens/student_management_screen.dart';
+// screen imports removed; MainScaffold routes use GoRouter to navigate to screens
 import '../constants/app_colors.dart';
 
 /// MainScaffold provides a BottomNavigationBar with IndexedStack to preserve

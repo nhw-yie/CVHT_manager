@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../../constants/app_colors.dart';
 import '../../../models/student.dart';
 import '../../../providers/student_provider.dart';
@@ -85,8 +86,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
           ],
         ),
         onTap: () {
-          Navigator.pushNamed(context, '/activity_detail',
-              arguments: s.studentId.toString());
+          context.push('/advisor/students/${s.studentId}');
         },
       ),
     );

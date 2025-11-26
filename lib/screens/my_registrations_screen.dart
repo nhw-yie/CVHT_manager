@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
 import '../constants/app_colors.dart';
 import '../providers/registrations_provider.dart';
@@ -88,7 +89,7 @@ class _MyRegistrationsScreenState extends State<MyRegistrationsScreen> {
                                       Text('Điểm nhận: ${reg.status ?? '-'}'),
                                     const SizedBox(height: 12),
                                     Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                                      TextButton(onPressed: () => Navigator.pushNamed(context, '/activity_detail', arguments: activity?.activityId.toString()), child: const Text('Chi tiết')),
+                                      TextButton(onPressed: () => context.push('/student/activities/${activity?.activityId}'), child: const Text('Chi tiết')),
                                       const SizedBox(width: 8),
                                       if (!(status.toLowerCase().contains('cancel') || status.toLowerCase().contains('complete')))
                                         OutlinedButton(onPressed: () => _onCancelPressed(prov, reg.registrationId.toString()), child: const Text('Hủy đăng ký'))

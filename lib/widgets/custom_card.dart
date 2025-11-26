@@ -8,13 +8,15 @@ class CustomCard extends StatelessWidget {
   final double elevation;
   final BorderRadius? borderRadius;
   final VoidCallback? onTap;
+  final EdgeInsetsGeometry? margin;
+  final Color? color;
 
-  const CustomCard({Key? key, required this.child, this.padding, this.elevation = 1, this.borderRadius, this.onTap}) : super(key: key);
+  const CustomCard({Key? key, required this.child, this.padding, this.elevation = 1, this.borderRadius, this.onTap, this.margin, this.color}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final content = Padding(padding: padding ?? const EdgeInsets.all(12.0), child: child);
-    final card = Card(elevation: elevation, shape: RoundedRectangleBorder(borderRadius: borderRadius ?? AppRadius.base), child: content);
+    final card = Card(margin: margin, color: color, elevation: elevation, shape: RoundedRectangleBorder(borderRadius: borderRadius ?? AppRadius.base), child: content);
     if (onTap != null) return InkWell(onTap: onTap, borderRadius: borderRadius ?? AppRadius.base, child: card);
     return card;
   }

@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'dart:io';
+// removed explicit import of 'dart:typed_data' because `Uint8List` is available
+// via `package:flutter/foundation.dart` in this project
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../utils/error_handler.dart';
 
@@ -57,13 +60,20 @@ class ApiService {
   // - Android emulator: 10.0.2.2 maps to host machine localhost
   // - Desktop/web: use 127.0.0.1
   static String get _baseUrl {
+    // Allow compile-time override via `--dart-define=API_BASE_URL=...`
+    const env = String.fromEnvironment('API_BASE_URL', defaultValue: '');
+    if (env.isNotEmpty) return env;
+    // Keep Android emulator mapping, but default to 127.0.0.1:8000 for all other platforms.
     try {
       if (Platform.isAndroid) return 'http://10.0.2.2:8000/api';
     } catch (_) {}
-    return 'http://127.0.0.1:8000/api';
+    return 'http://127.0.0.1:8000/api'; // Default API base URL
   }
 
   static ApiService? _instance;
+
+  /// Public access to the computed base URL for building full resource links
+  static String get baseUrl => _baseUrl;
 
   final Dio _dio;
   final TokenStorage _tokenStorage;
@@ -73,15 +83,17 @@ class ApiService {
 
   ApiService._internal(this._tokenStorage)
     : _dio = Dio(
-        BaseOptions(
-          baseUrl: _baseUrl,
-          connectTimeout: const Duration(seconds: 30),
-          receiveTimeout: const Duration(seconds: 30),
+          BaseOptions(
+            baseUrl: _baseUrl,
+            // Increase default timeouts from 30s -> 60s to avoid aborting slow requests
+            connectTimeout: const Duration(seconds: 60),
+            receiveTimeout: const Duration(seconds: 60),
           // ❌ sendTimeout gây lỗi trên web
           // sendTimeout: const Duration(seconds: 30),
           responseType: ResponseType.json,
         ),
       ) {
+    if (kDebugMode) debugPrint('ApiService initialized with baseUrl=$_baseUrl');
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -117,7 +129,14 @@ class ApiService {
   }
 
   static ApiService init({TokenStorage? tokenStorage}) {
-    _instance ??= ApiService._internal(tokenStorage ?? SecureTokenStorage());
+    // If a specific TokenStorage is provided, prefer using it so callers
+    // (e.g. AuthProvider with SharedPrefTokenStorage) share the same storage.
+    if (_instance == null) {
+      _instance = ApiService._internal(tokenStorage ?? SecureTokenStorage());
+    } else if (tokenStorage != null && _instance!._tokenStorage != tokenStorage) {
+      // Recreate the instance to bind to the requested storage.
+      _instance = ApiService._internal(tokenStorage);
+    }
     return _instance!;
   }
 
@@ -329,23 +348,18 @@ class ApiService {
       if (resp != null) {
         // Debug: print status and body to help diagnose failures when tapping
         try {
-          // Only print in debug mode
-          // ignore: avoid_print
-          if (resp.statusCode != null)
-            print('API GET /notifications/$id status=${resp.statusCode}');
-          // ignore: avoid_print
-          if (resp.data != null)
-            print('API GET /notifications/$id body=${resp.data}');
+          // Only log in debug mode
+          if (kDebugMode) {
+            if (resp.statusCode != null) debugPrint('API GET /notifications/$id status=${resp.statusCode}');
+            if (resp.data != null) debugPrint('API GET /notifications/$id body=${resp.data}');
+          }
         } catch (_) {}
       }
       return _parseData(resp);
     } on DioException catch (e) {
       // Debug info for failed request
       try {
-        // ignore: avoid_print
-        print(
-          'Notification detail request failed for id=$id: status=${e.response?.statusCode}, data=${e.response?.data}',
-        );
+        if (kDebugMode) debugPrint('Notification detail request failed for id=$id: status=${e.response?.statusCode}, data=${e.response?.data}');
       } catch (_) {}
       throw _handleDioError(e);
     }
@@ -518,6 +532,17 @@ class ApiService {
     }
   }
 
+  /// Lấy danh sách registrations cho activity (advisor only)
+  /// Response shape theo docs: { data: { activity, summary, registrations: [...] } }
+  Future<Map<String, dynamic>> getActivityRegistrations(int activityId) async {
+    try {
+      final resp = await _dio.get('/activities/$activityId/registrations');
+      return _parseData(resp);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
   Future<Map<String, dynamic>> registerActivity(
     Map<String, dynamic> payload,
   ) async {
@@ -549,6 +574,60 @@ class ApiService {
         '/activity-registrations/cancel',
         data: payload,
       );
+      return _parseData(resp);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// Export registrations for an activity as an Excel file (.xlsx)
+  Future<Uint8List> exportRegistrations(int activityId) async {
+    try {
+      final resp = await _dio.get(
+        '/activities/$activityId/export-registrations',
+        options: Options(responseType: ResponseType.bytes),
+      );
+      if (resp.data is Uint8List) return resp.data as Uint8List;
+      if (resp.data is List<int>) return Uint8List.fromList(List<int>.from(resp.data as List));
+      return Uint8List(0);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// Export an attendance template (Excel) for an activity
+  Future<Uint8List> exportAttendanceTemplate(int activityId) async {
+    try {
+      final resp = await _dio.get(
+        '/activities/$activityId/export-attendance-template',
+        options: Options(responseType: ResponseType.bytes),
+      );
+      if (resp.data is Uint8List) return resp.data as Uint8List;
+      if (resp.data is List<int>) return Uint8List.fromList(List<int>.from(resp.data as List));
+      return Uint8List(0);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// Import attendance file for an activity. `file` should be an .xlsx/.xls file.
+  Future<Map<String, dynamic>> importAttendance(int activityId, File file) async {
+    try {
+      final fileName = file.path.split(Platform.pathSeparator).last;
+      final form = FormData.fromMap({
+        'file': await MultipartFile.fromFile(file.path, filename: fileName),
+      });
+      final resp = await _dio.post('/activities/$activityId/import-attendance', data: form);
+      return _parseData(resp);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// Get attendance statistics for an activity
+  Future<Map<String, dynamic>> getAttendanceStatistics(int activityId) async {
+    try {
+      final resp = await _dio.get('/activities/$activityId/attendance-statistics');
       return _parseData(resp);
     } on DioException catch (e) {
       throw _handleDioError(e);
@@ -795,6 +874,14 @@ class ApiService {
     String message = 'Unknown error';
     try {
       final d = e.response?.data;
+      // Common web/network errors (XMLHttpRequest onError) are surfaced as DioException with no response.
+      final lowMsg = (e.message ?? '').toString().toLowerCase();
+      final errStr = (e.error ?? '').toString().toLowerCase();
+      if (lowMsg.contains('xmlhttprequest') || errStr.contains('xmlhttprequest') || lowMsg.contains('onerror')) {
+        message = 'Lỗi mạng hoặc CORS: không thể kết nối tới API từ trình duyệt. Kiểm tra backend đang chạy và cấu hình CORS.';
+        return ApiException(message, statusCode: status);
+      }
+
       if (d is Map && d['message'] != null)
         message = d['message'].toString();
       else if (e.message != null)
@@ -845,4 +932,101 @@ class ApiService {
       throw _handleDioError(e);
     }
   }
+
+  Future<Map<String, dynamic>> getConversations() async {
+  try {
+    final resp = await _dio.get('/dialogs/conversations');
+    return _parseData(resp);
+  } on DioException catch (e) {
+    throw _handleDioError(e);
+  }
+}
+
+/// Get messages in a conversation with a specific partner
+/// - Student: partner_id = advisor_id
+/// - Advisor: partner_id = student_id
+/// AUTO marks messages as read from partner
+Future<Map<String, dynamic>> getDialogMessages({
+  required int partnerId,
+}) async {
+  try {
+    final resp = await _dio.get(
+      '/dialogs/messages',
+      queryParameters: {'partner_id': partnerId},
+    );
+    return _parseData(resp);
+  } on DioException catch (e) {
+    throw _handleDioError(e);
+  }
+}
+
+/// Send a message to partner
+/// - Student: partner_id = advisor_id
+/// - Advisor: partner_id = student_id
+Future<Map<String, dynamic>> sendDialogMessage({
+  required int partnerId,
+  required String content,
+  String? attachmentPath,
+}) async {
+  try {
+    final resp = await _dio.post(
+      '/dialogs/messages',
+      data: {
+        'partner_id': partnerId,
+        'content': content,
+        if (attachmentPath != null) 'attachment_path': attachmentPath,
+      },
+    );
+    return _parseData(resp);
+  } on DioException catch (e) {
+    throw _handleDioError(e);
+  }
+}
+
+/// Mark a specific message as read (usually not needed, getMessages auto-marks)
+Future<void> markDialogMessageRead(int messageId) async {
+  try {
+    await _dio.put('/dialogs/messages/$messageId/read');
+  } on DioException catch (e) {
+    throw _handleDioError(e);
+  }
+}
+
+/// Delete a message (only sender can delete)
+Future<void> deleteDialogMessage(int messageId) async {
+  try {
+    await _dio.delete('/dialogs/messages/$messageId');
+  } on DioException catch (e) {
+    throw _handleDioError(e);
+  }
+}
+
+/// Get unread message count
+Future<Map<String, dynamic>> getUnreadMessageCount() async {
+  try {
+    final resp = await _dio.get('/dialogs/unread-count');
+    return _parseData(resp);
+  } on DioException catch (e) {
+    throw _handleDioError(e);
+  }
+}
+
+/// Search messages in a conversation
+Future<Map<String, dynamic>> searchDialogMessages({
+  required int partnerId,
+  required String keyword,
+}) async {
+  try {
+    final resp = await _dio.get(
+      '/dialogs/messages/search',
+      queryParameters: {
+        'partner_id': partnerId,
+        'keyword': keyword,
+      },
+    );
+    return _parseData(resp);
+  } on DioException catch (e) {
+    throw _handleDioError(e);
+  }
+}
 }

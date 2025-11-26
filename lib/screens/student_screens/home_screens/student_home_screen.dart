@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../providers/meeting_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/notification_provider_student.dart';
 import '../../../models/models.dart';
@@ -13,7 +15,7 @@ class StudentHomeScreen extends StatelessWidget {
     _FeatureItem('Thông báo', Icons.notifications, '/notifications'),
     _FeatureItem('Điểm số', Icons.grade, '/scores'),
     _FeatureItem('Hoạt động', Icons.event, '/activities'),
-    _FeatureItem('Họp lớp', Icons.people, '/class_meeting'),
+    _FeatureItem('Họp lớp', Icons.people, '/student/meetings'),
     _FeatureItem('Chat CVHT', Icons.chat, '/messages'),
     _FeatureItem('Lịch', Icons.calendar_month, '/calendar'),
   ];
@@ -21,7 +23,11 @@ class StudentHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<NotificationsProvider>(
-      create: (_) => NotificationsProvider()..fetchAll()..fetchUnread(),
+      create:
+          (_) =>
+              NotificationsProvider()
+                ..fetchAll()
+                ..fetchUnread(),
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
@@ -29,17 +35,18 @@ class StudentHomeScreen extends StatelessWidget {
           backgroundColor: AppColors.primary,
           title: const Text('Trang chủ'),
           leading: Builder(
-            builder: (context) => IconButton(
-              icon: const Icon(Icons.menu),
-              onPressed: () => Scaffold.of(context).openDrawer(),
-            ),
+            builder:
+                (context) => IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
           ),
           actions: [
             Consumer<NotificationsProvider>(
               builder: (context, notif, _) {
                 final count = notif.unreadCount;
                 return IconButton(
-                  onPressed: () => Navigator.pushNamed(context, '/notifications'),
+                  onPressed: () => context.go('/student/notifications'),
                   icon: Stack(
                     clipBehavior: Clip.none,
                     children: [
@@ -56,7 +63,10 @@ class StudentHomeScreen extends StatelessWidget {
                             ),
                             child: Text(
                               count > 99 ? '99+' : count.toString(),
-                              style: const TextStyle(color: Colors.white, fontSize: 10),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                              ),
                             ),
                           ),
                         ),
@@ -69,16 +79,22 @@ class StudentHomeScreen extends StatelessWidget {
               builder: (context, auth, _) {
                 final avatar = auth.currentUser?.avatarUrl;
                 return IconButton(
-                  onPressed: () => Navigator.pushNamed(context, '/profile'),
+                  onPressed: () => context.go('/student/profile'),
                   icon: CircleAvatar(
                     backgroundColor: AppColors.primaryVariant,
-                    backgroundImage: avatar != null && avatar.isNotEmpty ? NetworkImage(avatar) : null,
-                    child: avatar == null || avatar.isEmpty
-                        ? Text(
-                            (auth.currentUser?.fullName ?? 'U').substring(0, 1).toUpperCase(),
-                            style: const TextStyle(color: Colors.white),
-                          )
-                        : null,
+                    backgroundImage:
+                        avatar != null && avatar.isNotEmpty
+                            ? NetworkImage(avatar)
+                            : null,
+                    child:
+                        avatar == null || avatar.isEmpty
+                            ? Text(
+                              (auth.currentUser?.fullName ?? 'U')
+                                  .substring(0, 1)
+                                  .toUpperCase(),
+                              style: const TextStyle(color: Colors.white),
+                            )
+                            : null,
                   ),
                 );
               },
@@ -133,7 +149,10 @@ class StudentHomeScreen extends StatelessWidget {
             CircleAvatar(
               radius: 32,
               backgroundColor: AppColors.primaryVariant,
-              child: Text(name.isNotEmpty ? name[0].toUpperCase() : 'S', style: const TextStyle(color: Colors.white, fontSize: 24)),
+              child: Text(
+                name.isNotEmpty ? name[0].toUpperCase() : 'S',
+                style: const TextStyle(color: Colors.white, fontSize: 24),
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -142,18 +161,36 @@ class StudentHomeScreen extends StatelessWidget {
                 children: [
                   Text('Xin chào,', style: TextStyle(color: Colors.grey[700])),
                   const SizedBox(height: 4),
-                  Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Text('MSSV: $code', style: const TextStyle(fontSize: 13, color: Colors.black54)),
+                      Text(
+                        'MSSV: $code',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black54,
+                        ),
+                      ),
                       const SizedBox(width: 12),
-                      Text('Lớp: $className', style: const TextStyle(fontSize: 13, color: Colors.black54)),
+                      Text(
+                        'Lớp: $className',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black54,
+                        ),
+                      ),
                     ],
                   ),
                 ],
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -162,13 +199,23 @@ class StudentHomeScreen extends StatelessWidget {
 
   Widget _buildSummaryCard(BuildContext context) {
     Widget _stat(String label, String value, {Color? color}) => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)),
-            const SizedBox(height: 6),
-            Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color ?? Colors.black)),
-          ],
-        );
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Colors.black54),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: color ?? Colors.black,
+          ),
+        ),
+      ],
+    );
 
     return Card(
       color: AppColors.card,
@@ -203,20 +250,114 @@ class StudentHomeScreen extends StatelessWidget {
           crossAxisSpacing: 8,
           mainAxisSpacing: 8,
           childAspectRatio: 1,
-          children: _features.map((f) {
-            return InkWell(
-              onTap: () => Navigator.pushNamed(context, f.route),
-              borderRadius: BorderRadius.circular(8),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircleAvatar(radius: 24, backgroundColor: AppColors.primary.withOpacity(0.1), child: Icon(f.icon, color: AppColors.primary)),
-                  const SizedBox(height: 8),
-                  Text(f.label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12)),
-                ],
-              ),
-            );
-          }).toList(),
+          children:
+              _features.map((f) {
+                // For meetings tile, show upcoming count badge and rebuild when meetings change
+                if (f.route == '/student/meetings') {
+                  return Consumer<MeetingProvider>(
+                    builder: (context, meetingProv, _) {
+                      // fetch meetings once if empty
+                      if (meetingProv.meetings.isEmpty) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          meetingProv.fetchMeetings();
+                        });
+                      }
+
+                      final upcomingCount =
+                          meetingProv.meetings.where((m) {
+                            final now = DateTime.now();
+                            return m.status == 'scheduled' &&
+                                m.meetingTime.isAfter(now) &&
+                                m.meetingTime.isBefore(
+                                  now.add(const Duration(hours: 24)),
+                                );
+                          }).length;
+
+                      return InkWell(
+                        onTap: () => context.go(f.route),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: AppColors.primary
+                                      .withOpacity(0.1),
+                                  child: Icon(f.icon, color: AppColors.primary),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  f.label,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
+                            if (upcomingCount > 0)
+                              Positioned(
+                                right: 12,
+                                top: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.redAccent,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.redAccent.withOpacity(
+                                          0.4,
+                                        ),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 1),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    upcomingCount > 99
+                                        ? '99+'
+                                        : upcomingCount.toString(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                }
+
+                return InkWell(
+                  onTap: () => context.go(f.route),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundColor: AppColors.primary.withOpacity(0.1),
+                        child: Icon(f.icon, color: AppColors.primary),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        f.label,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
         ),
       ),
     );
@@ -227,24 +368,37 @@ class StudentHomeScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Thông báo mới nhất', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'Thông báo mới nhất',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 8),
         Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: Column(
-              children: latest.isEmpty
-                  ? [const ListTile(title: Text('Không có thông báo mới'))]
-                  : latest.map((n) {
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                        title: Text(n.title),
-                        subtitle: n.summary != null ? Text(n.summary!) : null,
-                        trailing: Text(n.createdAt != null ? _formatDate(n.createdAt!) : ''),
-                        onTap: () => prov.markAsRead(n),
-                      );
-                    }).toList(),
+              children:
+                  latest.isEmpty
+                      ? [const ListTile(title: Text('Không có thông báo mới'))]
+                      : latest.map((n) {
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 4,
+                            horizontal: 8,
+                          ),
+                          title: Text(n.title),
+                          subtitle: n.summary != null ? Text(n.summary!) : null,
+                          trailing: Text(
+                            n.createdAt != null
+                                ? _formatDate(n.createdAt!)
+                                : '',
+                          ),
+                          onTap: () => prov.markAsRead(n),
+                        );
+                      }).toList(),
             ),
           ),
         ),
@@ -254,7 +408,8 @@ class StudentHomeScreen extends StatelessWidget {
 
   String _formatDate(DateTime dt) {
     final now = DateTime.now();
-    if (now.difference(dt).inDays == 0) return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    if (now.difference(dt).inDays == 0)
+      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     return '${dt.day}/${dt.month}/${dt.year}';
   }
 }

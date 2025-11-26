@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../constants/app_colors.dart';
-import '../../../../models/models.dart';
 import '../../../../providers/advisor_activities_provider.dart';
 
 class AdvisorActivityDetailScreen extends StatefulWidget {
@@ -18,7 +19,10 @@ class _AdvisorActivityDetailScreenState extends State<AdvisorActivityDetailScree
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<AdvisorActivitiesProvider>(context, listen: false).fetchDetail(int.parse(widget.activityId));
+      final prov = Provider.of<ActivitiesProvider>(context, listen: false);
+      prov.fetchDetail(int.parse(widget.activityId));
+      if (kDebugMode) print('Calling fetchRegistrations for activity ${widget.activityId}');
+      prov.fetchRegistrations(int.parse(widget.activityId));
     });
   }
 
@@ -26,7 +30,7 @@ class _AdvisorActivityDetailScreenState extends State<AdvisorActivityDetailScree
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Chi tiết hoạt động'), backgroundColor: AppColors.primary),
-      body: Consumer<AdvisorActivitiesProvider>(builder: (ctx, prov, _) {
+      body: Consumer<ActivitiesProvider>(builder: (ctx, prov, _) {
         if (prov.isDetailLoading) return const Center(child: CircularProgressIndicator());
         final a = prov.selected;
         if (a == null) return Center(child: Text('Không tìm thấy hoạt động'));
@@ -57,16 +61,32 @@ class _AdvisorActivityDetailScreenState extends State<AdvisorActivityDetailScree
                     leading: CircleAvatar(child: Text(s.fullName.isNotEmpty ? s.fullName[0].toUpperCase() : 'S')),
                     title: Text(s.fullName),
                     subtitle: Text('MSSV: ${s.userCode} • Lớp: ${s.classId ?? '-'}'),
-                    onTap: () => Navigator.of(context).pushNamed('/advisor/students/${s.studentId}'),
+                    onTap: () => context.push('/advisor/students/${s.studentId}'),
                   );
                 },
               ),
               const SizedBox(height: 20),
             ],
+            // Debug: show raw registrations and a reload button
+            const SizedBox(height: 8),
+            Text('Registrations count: ${prov.registrations.length}'),
+            const SizedBox(height: 6),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Text(prov.registrations.toString()),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () {
+                if (kDebugMode) print('Manual reload registrations for ${widget.activityId}');
+                prov.fetchRegistrations(int.parse(widget.activityId));
+              },
+              child: const Text('Reload registrations'),
+            ),
             Row(children: [
-              ElevatedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Quay lại')),
+              ElevatedButton(onPressed: () => context.pop(), child: const Text('Quay lại')),
               const SizedBox(width: 12),
-              ElevatedButton(onPressed: () => Navigator.of(context).pushNamed('/advisor/activities/manage/edit/${a.activityId}'), child: const Text('Chỉnh sửa')),
+              ElevatedButton(onPressed: () => context.push('/advisor/activities/manage/edit/${a.activityId}'), child: const Text('Chỉnh sửa')),
             ])
           ]),
         );

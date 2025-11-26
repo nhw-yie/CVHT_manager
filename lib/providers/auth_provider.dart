@@ -146,12 +146,11 @@ class AuthProvider with ChangeNotifier {
         isAuthenticated = true;
         // set token in ApiService via saving in storage (already same storage) and fetch me
         try {
-          final me = await _api.me();
-          currentUser = User.fromJson(
-            me['data'] is Map
-                ? me['data'] as Map<String, dynamic>
-                : me as Map<String, dynamic>,
-          );
+            final me = await _api.me();
+            final Map<String, dynamic> meData = me['data'] != null
+              ? Map<String, dynamic>.from(me['data'])
+              : Map<String, dynamic>.from(me);
+            currentUser = User.fromJson(meData);
         } on ApiException catch (e) {
           // If unauthorized, try refresh
           if (e.statusCode == 401) {
@@ -189,11 +188,10 @@ class AuthProvider with ChangeNotifier {
         isAuthenticated = true;
         // fetch me
         final me = await _api.me();
-        currentUser = User.fromJson(
-          me['data'] is Map
-              ? me['data'] as Map<String, dynamic>
-              : me as Map<String, dynamic>,
-        );
+        final Map<String, dynamic> meData = me['data'] != null
+          ? Map<String, dynamic>.from(me['data'])
+          : Map<String, dynamic>.from(me);
+        currentUser = User.fromJson(meData);
         try {
           _authStateController.add(true);
         } catch (_) {}

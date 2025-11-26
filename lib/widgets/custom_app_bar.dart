@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
+  final Widget? titleWidget;
   final List<Widget>? actions;
   final bool showBackButton;
   final Gradient? gradient;
@@ -14,6 +15,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   const CustomAppBar({
     Key? key,
     required this.title,
+    this.titleWidget,
     this.actions,
     this.showBackButton = false,
     this.gradient,
@@ -28,7 +30,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final bg = backgroundColor ?? AppColors.primary;
     return AppBar(
-      title: Text(title, style: Theme.of(context).textTheme.titleLarge),
+      title: titleWidget ?? Text(title, style: Theme.of(context).textTheme.titleLarge),
       centerTitle: false,
       elevation: elevation,
       backgroundColor: gradient == null ? bg : null,

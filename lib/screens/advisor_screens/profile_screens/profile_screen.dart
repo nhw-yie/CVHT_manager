@@ -1,8 +1,8 @@
-// ...existing code...
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../constants/app_colors.dart';
 import '../../../providers/advisor_provider.dart';
@@ -30,10 +30,10 @@ class _AdvisorProfileScreenState extends State<AdvisorProfileScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final prov = Provider.of<AdvisorProvider?>(context, listen: false);
-      final id = auth.currentUser?.id ?? auth.currentUser?.advisorId;
+      final id = auth.currentUser?.id;
       if (prov != null && id != null) {
-        prov.fetchAdvisorDetail(id as int);
-        prov.fetchAdvisorClasses(id as int);
+        prov.fetchAdvisorDetail(id);
+        prov.fetchAdvisorClasses(id);
       }
     });
   }
@@ -84,6 +84,25 @@ class _AdvisorProfileScreenState extends State<AdvisorProfileScreen> {
     );
   }
 
+  Future<void> _logout(AuthProvider auth) async {
+    final sure = await showDialog<bool>(context: context, builder: (ctx) {
+      return AlertDialog(
+        title: const Text('Đăng xuất'),
+        content: const Text('Bạn có chắc muốn đăng xuất?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Đăng xuất', style: TextStyle(color: Colors.red))),
+        ],
+      );
+    });
+
+    if (sure == true) {
+      await auth.logout();
+      if (!mounted) return;
+      context.go('/');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // If AdvisorProvider isn't provided by parent route, create a local instance
@@ -95,7 +114,7 @@ class _AdvisorProfileScreenState extends State<AdvisorProfileScreen> {
           )
         : Consumer2<AuthProvider, AdvisorProvider>(
             builder: (ctx, auth, provider, _) {
-              final adv = provider.selectedAdvisor ?? (auth.currentUser as Advisor?);
+              final adv = provider.selectedAdvisor;
               if (provider.isLoading && adv == null) {
                 return const Scaffold(body: Center(child: CircularProgressIndicator()));
               }
@@ -118,6 +137,7 @@ class _AdvisorProfileScreenState extends State<AdvisorProfileScreen> {
                   backgroundColor: AppColors.primary,
                   actions: [
                     IconButton(icon: const Icon(Icons.edit), onPressed: () => _showEditSheet(provider, adv)),
+                    IconButton(icon: const Icon(Icons.logout), onPressed: () => _logout(auth)),
                   ],
                 ),
                 body: SingleChildScrollView(
@@ -144,7 +164,7 @@ class _AdvisorProfileScreenState extends State<AdvisorProfileScreen> {
                           const Text('Thông tin liên hệ', style: TextStyle(fontWeight: FontWeight.bold)),
                           const SizedBox(height: 8),
                           ListTile(title: const Text('Số điện thoại'), subtitle: Text(adv.phoneNumber ?? '-')),
-                          ListTile(title: const Text('Đơn vị'), subtitle: Text(adv.unitName ?? '-')),
+                          ListTile(title: const Text('Đơn vị'), subtitle: Text(adv.unitId?.toString() ?? '-')),
                         ]),
                       ),
                     ),
@@ -166,8 +186,8 @@ class _AdvisorProfileScreenState extends State<AdvisorProfileScreen> {
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           const Text('Hoạt động gần đây', style: TextStyle(fontWeight: FontWeight.bold)),
                           const SizedBox(height: 8),
-                          // placeholder: lấy từ provider.selectedAdvisor.activities nếu có
-                          Text((provider.selectedAdvisor?.activities ?? []).isEmpty ? 'Không có hoạt động' : (provider.selectedAdvisor?.activities?.map((a)=>a.title).join('\n') ?? '')),
+                          // placeholder: activities not available on Advisor model currently
+                          const Text('Không có hoạt động'),
                         ]),
                       ),
                     ),
@@ -179,4 +199,3 @@ class _AdvisorProfileScreenState extends State<AdvisorProfileScreen> {
           );
   }
 }
-// ...existing code...

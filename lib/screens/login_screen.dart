@@ -102,6 +102,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Login bình thường, không truyền role
                       await auth.login(email, password, _selectedRole!);
 
+                      if (!mounted) return;
+
                       if (auth.isAuthenticated) {
                         // Prefer server role; if not available, fall back to selected role
                         final serverRole = auth.currentUser?.role?.toLowerCase();

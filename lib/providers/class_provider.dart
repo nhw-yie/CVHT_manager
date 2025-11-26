@@ -55,7 +55,7 @@ class ClassProvider extends ChangeNotifier {
     try {
       final resp = await _api.getClasses(page: usePage, perPage: usePer);
       // resp có thể là Map { success, data } hoặc List
-      final data = resp is Map ? resp['data'] : resp;
+      final data = resp['data'] ?? resp;
       if (data is List) {
         _classes = data.map((e) => ClassModel.fromJson(e as Map<String, dynamic>)).toList();
       } else {
@@ -79,7 +79,7 @@ class ClassProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final resp = await _api.getClassDetail(classId);
-      final data = resp is Map ? resp['data'] : resp;
+      final data = resp['data'] ?? resp;
       if (data is Map<String, dynamic>) {
         _selectedClass = ClassModel.fromJson(data);
       } else {
@@ -102,7 +102,7 @@ class ClassProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final resp = await _api.getStudentsByClass(classId);
-      final data = resp is Map ? resp['data'] : resp;
+      final data = resp['data'] ?? resp;
       if (data is List) {
         _students = data.map((e) => Student.fromJson(e as Map<String, dynamic>)).toList();
       } else {
@@ -124,7 +124,7 @@ class ClassProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final resp = await _api.createClass(payload);
+      await _api.createClass(payload);
       // nếu thành công, refresh list
       await fetchClasses(reset: true);
       return true;

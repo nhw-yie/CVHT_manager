@@ -134,9 +134,12 @@ class _AssignStudentsScreenState extends State<AssignStudentsScreen> {
       final nav = Navigator.of(context);
       showDialog<void>(context: context, barrierDismissible: false, builder: (ctx) => const Center(child: CircularProgressIndicator()));
       await Future.delayed(const Duration(seconds: 1));
+
+      if (!mounted) return;
+
       nav.pop();
       messenger.showSnackBar(SnackBar(content: Text('Đã gửi thông báo đến ${_selected.length} sinh viên')));
-      if (mounted) setState(() => _selected.clear());
+      setState(() => _selected.clear());
     }
   }
 

@@ -1,177 +1,361 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-import '../../../constants/app_colors.dart';
-import '../../../models/models.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import '../../../services/api_service.dart';
+import '../../../utils/error_handler.dart';
 import '../../../providers/activities_provider.dart';
+import '../../../constants/app_colors.dart';
+import '../../../widgets/widgets.dart';
 
-class ActivitiesListScreen extends StatefulWidget {
-  const ActivitiesListScreen({Key? key}) : super(key: key);
+class StudentActivitiesScreen extends StatefulWidget {
+  const StudentActivitiesScreen({Key? key}) : super(key: key);
 
   @override
-  State<ActivitiesListScreen> createState() => _ActivitiesListScreenState();
+  State<StudentActivitiesScreen> createState() => _StudentActivitiesScreenState();
 }
 
-class _ActivitiesListScreenState extends State<ActivitiesListScreen> with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-  final TextEditingController _searchController = TextEditingController();
+class _StudentActivitiesScreenState extends State<StudentActivitiesScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  bool _regsLoading = true;
+  String? _regsError;
+  List<dynamic> _registrations = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ActivitiesProvider>().fetchActivities();
+      _fetchMyRegistrations();
+    });
+  }
+
+  Future<void> _fetchMyRegistrations() async {
+    setState(() {
+      _regsLoading = true;
+      _regsError = null;
+    });
+
+    try {
+      final resp = await ApiService.instance.myRegistrations();
+      final data = resp['data'] ?? resp;
+      List regs = [];
+      if (data is Map && data['registrations'] is List) {
+        regs = data['registrations'] as List;
+      } else if (data is List) {
+        regs = data;
+      }
+      setState(() {
+        _registrations = regs;
+      });
+    } catch (e) {
+      setState(() {
+        _regsError = ErrorHandler.mapToMessage(e);
+      });
+    } finally {
+      setState(() {
+        _regsLoading = false;
+      });
+    }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _searchController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ActivitiesProvider(),
-      child: Scaffold(
-        appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
-          title: const Text('Hoạt động'),
-          backgroundColor: AppColors.primary,
-          actions: [
-            IconButton(icon: const Icon(Icons.search), onPressed: () => _openSearchDialog(context)),
-          ],
-          bottom: TabBar(controller: _tabController, tabs: const [Tab(text: 'Sắp tới'), Tab(text: 'Đã đăng ký'), Tab(text: 'Lịch sử')]),
-        ),
-        body: TabBarView(
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Hoạt động'),
+        actions: [
+          IconButton(
+            tooltip: 'Xem các hoạt động đã đăng ký',
+            onPressed: () => context.push('/student/my-registrations'),
+            icon: const Icon(Icons.how_to_reg),
+          ),
+        ],
+        bottom: TabBar(
           controller: _tabController,
-          children: [
-            _buildTabContent(context, 'upcoming'),
-            _buildTabContent(context, 'registered'),
-            _buildTabContent(context, 'history'),
+          tabs: [
+            const Tab(text: 'Tất cả'),
+            const Tab(text: 'Sắp diễn ra'),
+            Tab(text: 'Đã đăng ký' + (_registrations.isNotEmpty ? ' (${_registrations.length})' : '')),
           ],
         ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildAllActivitiesTab(),
+          _buildUpcomingActivitiesTab(),
+          _buildMyRegistrationsTab(),
+        ],
       ),
     );
   }
 
-  Widget _buildTabContent(BuildContext context, String status) {
-    final provider = Provider.of<ActivitiesProvider>(context, listen: false);
+  Widget _buildAllActivitiesTab() {
+    return Consumer<ActivitiesProvider>(
+      builder: (context, provider, _) {
+        if (provider.isLoading && provider.activities.isEmpty) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    return FutureBuilder<void>(
-      future: provider.fetchActivities(status: status),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting && provider.activities.isEmpty) {
-          return _buildLoadingSkeleton();
+        if (provider.errorMessage != null) {
+          return ErrorDisplay(
+            message: provider.errorMessage!,
+            onRetry: () => provider.fetchActivities(),
+          );
+        }
+
+        if (provider.activities.isEmpty) {
+          return const EmptyState(
+            icon: Icons.event_busy,
+            message: 'Chưa có hoạt động nào',
+          );
         }
 
         return RefreshIndicator(
-          onRefresh: provider.refresh,
-          child: Consumer<ActivitiesProvider>(builder: (context, prov, _) {
-            final items = prov.activities;
-            if (prov.isLoading && items.isEmpty) return _buildLoadingSkeleton();
-            if (items.isEmpty) return ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [SizedBox(height: 200), Center(child: Text('Không có hoạt động'))]);
-
-            return ListView.separated(
-              padding: const EdgeInsets.all(12),
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, idx) {
-                final a = items[idx];
-                return _buildActivityCard(context, a, prov);
-              },
-            );
-          }),
-        );
-      },
-    );
-  }
-
-  Widget _buildActivityCard(BuildContext context, Activity a, ActivitiesProvider prov) {
-    Widget pointsBadge() => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(color: AppColors.accent, borderRadius: BorderRadius.circular(12)),
-          child: Text('${a.activityId}', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-        );
-
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            CircleAvatar(radius: 28, backgroundColor: AppColors.primaryVariant, child: const Icon(Icons.event, color: Colors.white)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(a.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
-                Row(children: [Icon(Icons.schedule, size: 14, color: Colors.black54), const SizedBox(width: 6), Text(_formatDateRange(a))]),
-                const SizedBox(height: 4),
-                Row(children: [Icon(Icons.location_on, size: 14, color: Colors.black54), const SizedBox(width: 6), Text(a.location ?? '')]),
-                const SizedBox(height: 8),
-                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Row(children: [Text('Đã đăng ký: 0'), const SizedBox(width: 12), pointsBadge()]),
-                  ElevatedButton(
-                    onPressed: () async {
-                      // Register flow (payload depends on API). We'll use activity_id as example.
-                      final messenger = ScaffoldMessenger.of(context);
-                      final ok = await prov.register({'activity_id': a.activityId});
-                      messenger.showSnackBar(SnackBar(content: Text(ok ? 'Đăng ký thành công' : 'Đăng ký thất bại')));
-                    },
-                    child: const Text('Đăng ký ngay'),
-                  )
-                ])
-              ]),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLoadingSkeleton() {
-    return ListView.separated(
-      padding: const EdgeInsets.all(12),
-      itemCount: 6,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, idx) {
-        return Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(children: [
-              Container(width: 56, height: 56, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(28))),
-              const SizedBox(width: 12),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Container(height: 14, color: Colors.grey[300]), const SizedBox(height: 8), Container(height: 12, color: Colors.grey[300])]))
-            ]),
+          onRefresh: () => provider.refresh(),
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: provider.activities.length,
+            itemBuilder: (context, index) {
+              final activity = provider.activities[index];
+              return _buildActivityCard(activity);
+            },
           ),
         );
       },
     );
   }
 
-  void _openSearchDialog(BuildContext context) async {
-    final prov = Provider.of<ActivitiesProvider>(context, listen: false);
-    final q = await showDialog<String>(context: context, builder: (ctx) {
-      final ctrl = TextEditingController();
-      return AlertDialog(
-        title: const Text('Tìm kiếm'),
-        content: TextField(controller: ctrl, decoration: const InputDecoration(hintText: 'Nhập tên hoạt động...')),
-        actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Hủy')), TextButton(onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()), child: const Text('Tìm'))],
-      );
-    });
+  Widget _buildUpcomingActivitiesTab() {
+    return Consumer<ActivitiesProvider>(
+      builder: (context, provider, _) {
+        final upcomingActivities = provider.activities.where((a) {
+          return a.status == 'upcoming' && 
+                 (a.startTime?.isAfter(DateTime.now()) ?? false);
+        }).toList();
 
-    if (q != null && q.isNotEmpty) {
-      await prov.fetchActivities(q: q);
-    }
+        if (upcomingActivities.isEmpty) {
+          return const EmptyState(
+            icon: Icons.event_available,
+            message: 'Không có hoạt động sắp diễn ra',
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () => provider.refresh(),
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: upcomingActivities.length,
+            itemBuilder: (context, index) {
+              final activity = upcomingActivities[index];
+              return _buildActivityCard(activity, showRegisterButton: true);
+            },
+          ),
+        );
+      },
+    );
   }
 
-  String _formatDateRange(Activity a) {
-    if (a.startTime == null) return 'Thời gian chưa xác định';
-    final s = a.startTime!;
-    final e = a.endTime;
-    if (e == null) return '${s.day}/${s.month}/${s.year} ${s.hour}:${s.minute.toString().padLeft(2, '0')}';
-    return '${s.day}/${s.month} ${s.hour}:${s.minute.toString().padLeft(2, '0')} - ${e.day}/${e.month} ${e.hour}:${e.minute.toString().padLeft(2, '0')}';
+  Widget _buildMyRegistrationsTab() {
+    if (_regsLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_regsError != null) {
+      return ErrorDisplay(message: _regsError!, onRetry: _fetchMyRegistrations);
+    }
+
+    if (_registrations.isEmpty) {
+      return const EmptyState(
+        icon: Icons.event_busy,
+        message: 'Bạn chưa đăng ký hoạt động nào',
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _fetchMyRegistrations,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: _registrations.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final r = _registrations[index];
+          final activityIdField = r['activity_id'] ?? (r['activity'] is Map ? r['activity']['activity_id'] : null);
+          final activityId = activityIdField is int ? activityIdField : int.tryParse(activityIdField?.toString() ?? '');
+          final title = r['activity_title'] ?? (r['activity'] is Map ? r['activity']['title'] : 'Hoạt động');
+          final roleName = r['role_name'] ?? '';
+          final status = r['registration_status'] ?? '';
+          final startTimeStr = r['activity_start_time'] ?? (r['activity'] is Map ? r['activity']['start_time'] : null);
+          DateTime? startTime;
+          if (startTimeStr is String) startTime = DateTime.tryParse(startTimeStr);
+
+          return CustomCard(
+            onTap: activityId != null ? () => context.push('/student/activities/$activityId') : null,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: Text(title.toString(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), color: AppColors.primary.withOpacity(0.08)),
+                      child: Text(status.toString(), style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (roleName != null) Text('Vai trò: ${roleName.toString()}', style: TextStyle(color: Colors.grey[700])),
+                const SizedBox(height: 6),
+                Row(children: [Icon(Icons.access_time, size: 14, color: Colors.grey[600]), const SizedBox(width: 6), Text(startTime != null ? DateFormat('dd/MM/yyyy HH:mm').format(startTime) : (r['activity_location'] ?? ''))]),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildActivityCard(dynamic activity, {bool showRegisterButton = false}) {
+    final startTime = activity.startTime;
+    final endTime = activity.endTime;
+    final status = activity.status ?? 'upcoming';
+
+    return CustomCard(
+      margin: const EdgeInsets.only(bottom: 16),
+      onTap: () => context.push('/student/activities/${activity.activityId}'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  activity.title ?? '',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              _buildStatusBadge(status),
+            ],
+          ),
+          if (activity.generalDescription != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              activity.generalDescription!,
+              style: TextStyle(color: Colors.grey[600]),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  activity.location ?? 'Chưa xác định',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+              const SizedBox(width: 4),
+              Text(
+                startTime != null
+                    ? DateFormat('dd/MM/yyyy HH:mm').format(startTime)
+                    : 'Chưa xác định',
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              ),
+              if (endTime != null) ...[
+                Text(' - ', style: TextStyle(color: Colors.grey[600])),
+                Text(
+                  DateFormat('HH:mm').format(endTime),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                ),
+              ],
+            ],
+          ),
+          if (showRegisterButton) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _showRegisterDialog(context, activity),
+                icon: const Icon(Icons.how_to_reg),
+                label: const Text('Đăng ký tham gia'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color color;
+    String label;
+    
+    switch (status) {
+      case 'upcoming':
+        color = AppColors.primary;
+        label = 'Sắp diễn ra';
+        break;
+      case 'ongoing':
+        color = AppColors.warning;
+        label = 'Đang diễn ra';
+        break;
+      case 'completed':
+        color = AppColors.success;
+        label = 'Đã hoàn thành';
+        break;
+      case 'cancelled':
+        color = AppColors.error;
+        label = 'Đã hủy';
+        break;
+      default:
+        color = Colors.grey;
+        label = 'Không xác định';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  void _showRegisterDialog(BuildContext context, dynamic activity) {
+    context.push('/student/activities/${activity.activityId}');
   }
 }

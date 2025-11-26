@@ -55,6 +55,9 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final nav = Navigator.of(context);
     final ok = await prov.register({'activity_id': activity.activityId, 'activity_role_id': role.activityRoleId});
+
+    if (!mounted) return;
+
     // update state and UI (use captured messenger/nav to avoid using BuildContext after await)
     setState(() => _isRegistering = false);
 

@@ -10,17 +10,28 @@ import 'screens/student_screens/notification_screens/notification_detail_screen.
 import 'screens/advisor_screens/notification_screens/notifications_list_screen.dart' as advisor_notifications;
 import 'screens/advisor_screens/notification_screens/notification_detail_screen.dart' as advisor_notification_detail;
 import 'screens/advisor_screens/notification_screens/create_notification_screen.dart' as advisor_create;
-import 'screens/advisor_screens/activity_screens/activities_management_screen.dart' as advisor_activities_manage;
-import 'screens/advisor_screens/activity_screens/activity_detail_screen.dart' as advisor_activity_detail;
-import 'screens/advisor_screens/activity_screens/activity_form_screen.dart' as advisor_activity_form;
+import 'screens/advisor_screens/activity_screens/AdvisorActivitiesListScreen.dart';
+import 'screens/advisor_screens/activity_screens/AdvisorActivityDetailScreen.dart' as advisor_activity_detail;
+import 'screens/advisor_screens/activity_screens/CreateEditActivityScreen.dart' as advisor_activity_form;
 import 'screens/student_screens/activity_screens/activities_list_screen.dart';
-import 'screens/activity_detail_screen.dart';
+import 'screens/student_screens/activity_screens/StudentActivityDetailScreen.dart';
 import 'screens/my_registrations_screen.dart';
 import 'screens/points_management_screen.dart';
 import 'screens/main_scaffold.dart';
-import 'screens/chat_screen.dart';
+// removed unused imports
 import 'screens/student_screens/student_profile_screen.dart';
 import 'screens/advisor_screens/advisor_home_screen.dart';
+import 'screens/advisor_screens/meetting_screens/advisor_meeting_list_screen.dart';
+import 'screens/advisor_screens/meetting_screens/advisor_meeting_detail_screen.dart';
+import 'screens/advisor_screens/meetting_screens/create_meeting_screen.dart';
+import 'screens/advisor_screens/meetting_screens/edit_meeting_screen.dart';
+import 'screens/advisor_screens/meetting_screens/meeting_attendance_screen.dart';
+import 'screens/student_screens/meeting_screens/student_meeting_list_screen.dart';
+import 'screens/student_screens/meeting_screens/student_meeting_detail_screen.dart';
+import 'screens/advisor_screens/chat_screens/advisor_conversations_screen.dart';
+import 'screens/advisor_screens/chat_screens/advisor_chat_screen.dart';
+import 'screens/student_screens/chat_screens/student_chat_screen.dart';
+import 'screens/student_screens/chat_screens/student_conversations_screen.dart';
 // advisor notification screens are imported with prefixes above
 import 'screens/advisor_screens/students_manager_screens/student_management_screen.dart';
 import 'screens/student_screens/student_detail_screen.dart';
@@ -58,12 +69,30 @@ class AppRouter {
             GoRoute(path: '/student/home', builder: (ctx, s) => const StudentHomeScreen()),
             GoRoute(path: '/student/notifications', builder: (ctx, s) => const NotificationsListScreen()),
             GoRoute(path: '/student/notifications/:id', builder: (ctx, s) => NotificationDetailScreen(notificationId: s.pathParameters['id']!)),
-            GoRoute(path: '/student/activities', builder: (ctx, s) => const ActivitiesListScreen()),
-            GoRoute(path: '/student/activities/:id', builder: (ctx, s) => ActivityDetailScreen(activityId: s.pathParameters['id']!)),
+            GoRoute(path: '/student/activities', builder: (ctx, s) => const StudentActivitiesScreen()),
+            GoRoute(
+              path: '/student/activities/:id',
+              builder: (ctx, s) {
+                final idStr = s.pathParameters['id']!;
+                final id = int.tryParse(idStr) ?? int.parse(idStr);
+                return StudentActivityDetailScreen(activityId: id);
+              },
+            ),
             GoRoute(path: '/student/my-registrations', builder: (ctx, s) => const MyRegistrationsScreen()),
             GoRoute(path: '/student/points', builder: (ctx, s) => const PointsManagementScreen()),
-            GoRoute(path: '/student/meetings', builder: (ctx, s) => const SizedBox()),
-            GoRoute(path: '/student/chat/:advisorId', builder: (ctx, s) => ChatScreen(conversationId: s.pathParameters['advisorId']!, advisorName: '')),
+            GoRoute(path: '/student/meetings', builder: (ctx, s) => const StudentMeetingListScreen()),
+            GoRoute(path: '/student/meetings/:id', builder: (ctx, s) => StudentMeetingDetailScreen(meetingId: s.pathParameters['id']!)),
+            GoRoute(
+              path: '/student/chat/:advisorId',
+              builder: (ctx, s) {
+                final advisorId = int.tryParse(s.pathParameters['advisorId'] ?? '') ?? 0;
+                final extra = s.extra;
+                final advisorName = (extra is Map && extra['name'] != null) ? extra['name'] as String : '';
+                return StudentChatScreen(advisorId: advisorId, advisorName: advisorName);
+              },
+            ),
+            // student conversations list (bottom nav expects '/student/chat')
+            GoRoute(path: '/student/chat', builder: (ctx, s) => const StudentConversationsScreen()),
             GoRoute(path: '/student/profile', builder: (ctx, s) => const StudentProfileScreen()),
           ],
         ),
@@ -78,9 +107,8 @@ class AppRouter {
 GoRoute(
   path: '/advisor/notifications/:id',
   builder: (ctx, state) {
-    final id = state.pathParameters['id'];
     return advisor_notification_detail.NotificationDetailScreen(
-      notificationId: int.parse(id!), // Convert String to int
+      notificationId: int.parse(state.pathParameters['id']!), // Convert String to int
     );
   },
 ),
@@ -103,10 +131,8 @@ GoRoute(
            GoRoute(
   path: '/advisor/notifications/edit/:id',
   builder: (ctx, state) {
-    final id = state.pathParameters['id'];
     // Pass notification object through extra
     final notification = state.extra as NotificationModel?;
-    
     return advisor_create.CreateNotificationScreen(
       notification: notification, // Pass object, not just ID
     );
@@ -114,18 +140,57 @@ GoRoute(
 ),
             GoRoute(path: '/advisor/students', builder: (ctx, s) => const StudentManagementScreen()),
             GoRoute(path: '/advisor/students/:id', builder: (ctx, s) => StudentDetailScreen(studentId: s.pathParameters['id']!)),
-            GoRoute(path: '/advisor/activities', builder: (ctx, s) => const ActivitiesListScreen()),
-            GoRoute(path: '/advisor/activities/manage', builder: (ctx, s) => const advisor_activities_manage.ActivitiesManagementScreen()),
-            GoRoute(path: '/advisor/activities/manage/create', builder: (ctx, s) => const advisor_activity_form.AdvisorActivityFormScreen()),
-            GoRoute(path: '/advisor/activities/manage/edit/:id', builder: (ctx, s) => advisor_activity_form.AdvisorActivityFormScreen(activityId: int.tryParse(s.pathParameters['id'] ?? '') ),
+            GoRoute(path: '/advisor/activities', builder: (ctx, s) => const AdvisorActivitiesListScreen()),
+            GoRoute(path: '/advisor/activities/manage', builder: (ctx, s) => const AdvisorActivitiesListScreen()),
+            GoRoute(path: '/advisor/activities/manage/create', builder: (ctx, s) => const advisor_activity_form.CreateActivityScreen()),
+            GoRoute(
+              path: '/advisor/activities/manage/edit/:id',
+              builder: (ctx, s) {
+                final id = int.tryParse(s.pathParameters['id'] ?? '');
+                return advisor_activity_form.CreateActivityScreen(activityId: id);
+              },
             ),
-            GoRoute(path: '/advisor/activities/manage/:id', builder: (ctx, s) => advisor_activity_detail.AdvisorActivityDetailScreen(activityId: s.pathParameters['id']!)),
+            GoRoute(
+              path: '/advisor/activities/manage/:id',
+              builder: (ctx, s) {
+                final id = int.parse(s.pathParameters['id']!);
+                return advisor_activity_detail.AdvisorActivityDetailScreen(activityId: id);
+              },
+            ),
             GoRoute(path: '/advisor/activities/create', builder: (ctx, s) => const CreateActivityScreen()),
             GoRoute(path: '/advisor/activities/:id/assign', builder: (ctx, s) {
               final id = int.tryParse(s.pathParameters['id'] ?? '');
               return AssignStudentsScreen(activityId: id);
             }),
-            GoRoute(path: '/advisor/messages', builder: (ctx, s) => const ChatScreen(conversationId: '', advisorName: '')),
+            GoRoute(path: '/advisor/conversations', builder: (ctx, s) => const AdvisorConversationsScreen()),
+              // advisor messages bottom-nav target (alias)
+              GoRoute(path: '/advisor/messages', builder: (ctx, s) => const AdvisorConversationsScreen()),
+            GoRoute(
+              path: '/advisor/chat/:studentId',
+              builder: (ctx, s) {
+                final studentId = int.tryParse(s.pathParameters['studentId'] ?? '') ?? 0;
+                final extra = s.extra;
+                String studentName = '';
+                String studentCode = '';
+                String className = '';
+                if (extra is Map) {
+                  studentName = extra['studentName']?.toString() ?? '';
+                  studentCode = extra['studentCode']?.toString() ?? '';
+                  className = extra['className']?.toString() ?? '';
+                }
+                return AdvisorChatScreen(
+                  studentId: studentId,
+                  studentName: studentName,
+                  studentCode: studentCode,
+                  className: className,
+                );
+              },
+            ),
+            GoRoute(path: '/advisor/meetings', builder: (ctx, s) => const AdvisorMeetingListScreen()),
+            GoRoute(path: '/advisor/meetings/create', builder: (ctx, s) => const CreateMeetingScreen()),
+            GoRoute(path: '/advisor/meetings/edit/:id', builder: (ctx, s) => EditMeetingScreen(meetingId: s.pathParameters['id']!)),
+            GoRoute(path: '/advisor/meetings/:id', builder: (ctx, s) => AdvisorMeetingDetailScreen(meetingId: s.pathParameters['id']!)),
+            GoRoute(path: '/advisor/meetings/:id/attendance', builder: (ctx, s) => MeetingAttendanceScreen(meetingId: s.pathParameters['id']!)),
           ],
         ),
       ],

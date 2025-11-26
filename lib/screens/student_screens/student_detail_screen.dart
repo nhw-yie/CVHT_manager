@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../constants/app_colors.dart';
 import '../../models/student.dart';
 // ApiService can be used to fetch/update student data when backend is available.
@@ -66,7 +67,7 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> with TickerPr
   }
 
   void _sendMessage() {
-    Navigator.pushNamed(context, '/chat', arguments: {'conversationId': 'student_${widget.studentId}', 'advisorName': _student?.fullName ?? '', 'advisorAvatarUrl': _student?.avatarUrl ?? ''});
+    context.push('/student/chat/student_${widget.studentId}');
   }
 
   void _warnAcademic() async {
