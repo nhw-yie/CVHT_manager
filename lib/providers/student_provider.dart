@@ -65,7 +65,7 @@ class StudentProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> fetchStudentDetail(String id) async {
+  Future<void> fetchStudentDetail(int id) async {
     loading = true;
     error = null;
     notifyListeners();

@@ -7,8 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../../../providers/meeting_provider.dart';
 import '../../../models/meeting.dart';
 import '../../../widgets/widgets.dart';
-import '../../../constants/app_colors.dart';
 import '../../../theme/app_theme.dart';
+// import '../../../constants/app_colors.dart'; // Removed unused import
 
 class StudentMeetingListScreen extends StatefulWidget {
   const StudentMeetingListScreen({super.key});
@@ -44,7 +44,7 @@ class _StudentMeetingListScreenState extends State<StudentMeetingListScreen> {
       appBar: CustomAppBar(
         title: 'Cuộc họp lớp',
         gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+          colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.primary.withOpacity(0.8)],
         ),
       ),
       body: RefreshIndicator(
@@ -136,8 +136,8 @@ class _StudentMeetingListScreenState extends State<StudentMeetingListScreen> {
         });
       },
       backgroundColor: Colors.white,
-      selectedColor: AppColors.primary.withOpacity(0.2),
-      checkmarkColor: AppColors.primary,
+      selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+      checkmarkColor: Theme.of(context).colorScheme.primary,
     );
   }
 
@@ -207,13 +207,13 @@ class _StudentMeetingListScreenState extends State<StudentMeetingListScreen> {
             const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
-                Icon(Icons.description, size: 16, color: AppColors.success),
+                Icon(Icons.description, size: 16, color: Theme.of(context).colorScheme.tertiary),
                 const SizedBox(width: 4),
                 Text(
                   'Có biên bản',
                   style: TextStyle(
                     fontSize: 12,
-                    color: AppColors.success,
+                    color: Theme.of(context).colorScheme.tertiary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

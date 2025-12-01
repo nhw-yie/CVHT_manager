@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import '../../../constants/app_colors.dart';
+// import '../../../constants/app_colors.dart'; // replaced with Theme usage
 import '../../../models/models.dart';
 import '../../../providers/notification_provider_student.dart';
 
@@ -42,7 +42,7 @@ class _NotificationsListScreenState extends State<NotificationsListScreen> with 
       appBar: AppBar(
         leading: const BackButton(),
         title: const Text('Thông báo'),
-        backgroundColor: AppColors.primary,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -101,7 +101,7 @@ class _NotificationsListScreenState extends State<NotificationsListScreen> with 
             key: ValueKey(n.notificationId),
             direction: DismissDirection.endToStart,
             background: Container(
-              color: AppColors.primary,
+              color: Theme.of(context).colorScheme.primary,
               alignment: Alignment.centerRight,
               padding: const EdgeInsets.only(right: 20),
               child: const Icon(Icons.mark_email_read, color: Colors.white),
@@ -113,8 +113,8 @@ class _NotificationsListScreenState extends State<NotificationsListScreen> with 
               );
             },
             child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: n.isRead ? Colors.grey[300] : AppColors.accent,
+                leading: CircleAvatar(
+                backgroundColor: n.isRead ? Colors.grey[300] : Theme.of(context).colorScheme.secondary,
                 child: Icon(
                   n.isRead ? Icons.mark_email_read : Icons.mark_email_unread,
                   color: Colors.white,

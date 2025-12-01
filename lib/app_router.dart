@@ -16,7 +16,7 @@ import 'screens/advisor_screens/activity_screens/CreateEditActivityScreen.dart' 
 import 'screens/student_screens/activity_screens/activities_list_screen.dart';
 import 'screens/student_screens/activity_screens/StudentActivityDetailScreen.dart';
 import 'screens/my_registrations_screen.dart';
-import 'screens/points_management_screen.dart';
+import 'screens/student_screens/points_screens/enhanced_points_screen.dart';
 import 'screens/main_scaffold.dart';
 // removed unused imports
 import 'screens/student_screens/student_profile_screen.dart';
@@ -33,12 +33,15 @@ import 'screens/advisor_screens/chat_screens/advisor_chat_screen.dart';
 import 'screens/student_screens/chat_screens/student_chat_screen.dart';
 import 'screens/student_screens/chat_screens/student_conversations_screen.dart';
 // advisor notification screens are imported with prefixes above
-import 'screens/advisor_screens/students_manager_screens/student_management_screen.dart';
+import 'screens/advisor_screens/students_manager_screens/student_management_screen_v2.dart';
+import 'screens/advisor_screens/students_manager_screens/students_class_screen.dart';
 import 'screens/student_screens/student_detail_screen.dart';
+import 'screens/advisor_screens/students_manager_screens/student_detail_screen.dart' as advisor_student_detail;
 import 'screens/create_activity_screen.dart';
 import 'screens/assign_students_screen.dart';
 import 'screens/advisor_screens/profile_screens/profile_screen.dart';
 import 'providers/advisor_provider.dart';
+import 'providers/monitoring_notes_provider.dart';
 import 'models/notification_model.dart';
 
 /// AppRouter builds a GoRouter instance wired to AuthProvider for redirects.
@@ -79,7 +82,7 @@ class AppRouter {
               },
             ),
             GoRoute(path: '/student/my-registrations', builder: (ctx, s) => const MyRegistrationsScreen()),
-            GoRoute(path: '/student/points', builder: (ctx, s) => const PointsManagementScreen()),
+            GoRoute(path: '/student/points', builder: (ctx, s) => const EnhancedPointsScreen()),
             GoRoute(path: '/student/meetings', builder: (ctx, s) => const StudentMeetingListScreen()),
             GoRoute(path: '/student/meetings/:id', builder: (ctx, s) => StudentMeetingDetailScreen(meetingId: s.pathParameters['id']!)),
             GoRoute(
@@ -138,8 +141,30 @@ GoRoute(
     );
   },
 ),
-            GoRoute(path: '/advisor/students', builder: (ctx, s) => const StudentManagementScreen()),
-            GoRoute(path: '/advisor/students/:id', builder: (ctx, s) => StudentDetailScreen(studentId: s.pathParameters['id']!)),
+            GoRoute(path: '/advisor/students', builder: (ctx, s) => const StudentsClassScreen()),
+            GoRoute(path: '/advisor/students/manage', builder: (ctx, s) => const StudentManagementScreenV2()),
+            GoRoute(
+              path: '/advisor/students/:id',
+              builder: (ctx, s) {
+                final raw = s.pathParameters['id'];
+                final id = int.tryParse(raw ?? '');
+                if (id == null) {
+                  return Scaffold(
+                    appBar: AppBar(title: const Text('Sinh viên')),
+                    body: const Center(child: Text('ID sinh viên không hợp lệ')),
+                  );
+                }
+                return ChangeNotifierProvider<MonitoringNotesProvider>(
+                  create: (_) {
+                    final p = MonitoringNotesProvider();
+                    // kick off loading the student's monitoring timeline
+                    p.fetchStudentTimeline(id);
+                    return p;
+                  },
+                  child: advisor_student_detail.StudentDetailScreen(studentId: id),
+                );
+              },
+            ),
             GoRoute(path: '/advisor/activities', builder: (ctx, s) => const AdvisorActivitiesListScreen()),
             GoRoute(path: '/advisor/activities/manage', builder: (ctx, s) => const AdvisorActivitiesListScreen()),
             GoRoute(path: '/advisor/activities/manage/create', builder: (ctx, s) => const advisor_activity_form.CreateActivityScreen()),

@@ -67,7 +67,7 @@ class ApiService {
     try {
       if (Platform.isAndroid) return 'http://10.0.2.2:8000/api';
     } catch (_) {}
-    return 'http://127.0.0.1:8000/api'; // Default API base URL
+    return 'http://172.17.114.190:8000/api'; // Default API base URL
   }
 
   static ApiService? _instance;
@@ -635,19 +635,37 @@ class ApiService {
   }
 
   // ---------- Points ----------
-  Future<Map<String, dynamic>> getStudentPoints({
-    required String semesterId,
-  }) async {
-    try {
-      final resp = await _dio.get(
-        '/student-points',
-        queryParameters: {'semester_id': semesterId},
-      );
-      return _parseData(resp);
-    } on DioException catch (e) {
-      throw _handleDioError(e);
-    }
+Future<Map<String, dynamic>> getStudentPoints({
+  int? studentId,      // Bắt buộc nếu role = advisor
+  int? semesterId,     // Filter theo kỳ học (optional)
+}) async {
+  try {
+    final qp = <String, dynamic>{};
+    if (studentId != null) qp['student_id'] = studentId;
+    if (semesterId != null) qp['semester_id'] = semesterId;
+    
+    final resp = await _dio.get('/student-points', queryParameters: qp);
+    return _parseData(resp);
+  } on DioException catch (e) {
+    throw _handleDioError(e);
   }
+}
+
+/// Lấy tổng hợp điểm cả lớp (Advisor only)
+Future<Map<String, dynamic>> getClassPointsSummary({
+  required int classId,
+  int? semesterId,     // Filter theo kỳ học (optional)
+}) async {
+  try {
+    final qp = <String, dynamic>{'class_id': classId};
+    if (semesterId != null) qp['semester_id'] = semesterId;
+    
+    final resp = await _dio.get('/student-points/class-summary', queryParameters: qp);
+    return _parseData(resp);
+  } on DioException catch (e) {
+    throw _handleDioError(e);
+  }
+}
 
   /// Get students list. Supports pagination and search.
   /// Example: GET /students?page=1&per_page=50&q=keyword
@@ -734,9 +752,10 @@ class ApiService {
   }
 
   /// Get student details by id
-  Future<Map<String, dynamic>> getStudentById(String id) async {
+  Future<Map<String, dynamic>> getStudentById(int id) async {
     try {
       final resp = await _dio.get('/students/$id');
+      print(resp.data);
       return _parseData(resp);
     } on DioException catch (e) {
       throw _handleDioError(e);
@@ -868,6 +887,13 @@ class ApiService {
       return resp.data as Map<String, dynamic>;
     return {'data': resp.data};
   }
+
+  /// Public accessor for Dio client for advanced use-cases (file downloads/uploads).
+  /// Prefer using the high-level helpers (`get`, `post`, `put`, `delete`) when possible.
+  Dio get dio => _dio;
+
+  /// Public wrapper around internal response parser for extensions that need the parsed Map.
+  Map<String, dynamic> parseResponse(Response<dynamic> resp) => _parseData(resp);
 
   ApiException _handleDioError(DioException e) {
     final status = e.response?.statusCode;

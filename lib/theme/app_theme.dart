@@ -72,4 +72,45 @@ class AppTheme {
 
     return base;
   }
+
+  static ThemeData dark() {
+    final colorScheme = ColorScheme(
+      brightness: Brightness.dark,
+      primary: AppColors.primary,
+      onPrimary: Colors.white,
+      secondary: AppColors.secondary,
+      onSecondary: Colors.white,
+      error: AppColors.error,
+      onError: Colors.white,
+      background: const Color(0xFF121212),
+      onBackground: Colors.white70,
+      surface: const Color(0xFF1E1E1E),
+      onSurface: Colors.white70,
+      tertiary: AppColors.success,
+      onTertiary: Colors.white,
+      outline: Colors.grey,
+      shadow: Colors.black,
+      inverseSurface: Colors.grey.shade800,
+      inversePrimary: AppColors.primary,
+    );
+
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: colorScheme.background,
+      fontFamily: _fontFamily,
+      textTheme: _buildTextTheme(),
+      appBarTheme: AppBarTheme(
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+        elevation: 1,
+        titleTextStyle: _buildTextTheme().titleLarge?.copyWith(color: colorScheme.onPrimary),
+      ),
+      cardTheme: CardTheme(shape: RoundedRectangleBorder(borderRadius: AppRadius.base), color: colorScheme.surface, elevation: 1),
+      elevatedButtonTheme: ElevatedButtonThemeData(style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: AppRadius.base), backgroundColor: colorScheme.primary, foregroundColor: colorScheme.onPrimary)),
+      outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: AppRadius.base))),
+      inputDecorationTheme: InputDecorationTheme(border: OutlineInputBorder(borderRadius: AppRadius.base)),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(backgroundColor: colorScheme.secondary, foregroundColor: colorScheme.onSecondary),
+    );
+  }
 }

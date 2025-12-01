@@ -1,6 +1,7 @@
 // ...new file...
 import 'package:flutter/foundation.dart';
 import '../utils/error_handler.dart';
+import '../services/notification_service.dart';
 import '../services/meeting_service.dart';
 import '../models/meeting.dart';
 import '../models/meeting_student.dart';
@@ -52,13 +53,29 @@ class MeetingProvider extends ChangeNotifier {
     try {
       final resp = await _service.getMeetings(query: query);
       final data = resp['data'] ?? resp;
+      List<Meeting> parsed = [];
       if (data is List) {
-        _meetings = data.map((e) => Meeting.fromJson(e as Map<String, dynamic>)).toList();
+        parsed = data.map((e) => Meeting.fromJson(e as Map<String, dynamic>)).toList();
       } else if (data is Map && data['data'] is List) {
-        _meetings = (data['data'] as List).map((e) => Meeting.fromJson(e as Map<String, dynamic>)).toList();
+        parsed = (data['data'] as List).map((e) => Meeting.fromJson(e as Map<String, dynamic>)).toList();
       } else {
-        _meetings = [];
+        parsed = [];
       }
+
+      // detect newly created meetings
+      final existingIds = _meetings.map((m) => m.meetingId).toSet();
+      final newOnes = parsed.where((m) => !existingIds.contains(m.meetingId)).toList();
+      if (newOnes.isNotEmpty) {
+        final first = newOnes.first;
+        await NotificationService.instance.showNotification(
+          id: first.meetingId,
+          title: 'Cuộc họp mới',
+          body: first.title,
+          payload: 'meeting:${first.meetingId}',
+        );
+      }
+
+      _meetings = parsed;
     } catch (e) {
       // Provide friendly message for timeout/network issues
       if (e is ApiException && (e.message.toLowerCase().contains('timeout') || e.message.toLowerCase().contains('timed out'))) {

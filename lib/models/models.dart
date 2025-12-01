@@ -8,6 +8,7 @@ export 'activity_registration.dart';
 export 'message.dart';
 export 'user.dart';
 export 'unit.dart';
+export 'points.dart';
 export 'class_model.dart';
 export 'semester.dart';
 export 'course.dart';

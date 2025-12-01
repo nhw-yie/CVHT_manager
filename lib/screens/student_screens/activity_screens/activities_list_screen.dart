@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/error_handler.dart';
 import '../../../providers/activities_provider.dart';
-import '../../../constants/app_colors.dart';
+// migrated to use Theme colors
 import '../../../widgets/widgets.dart';
 
 class StudentActivitiesScreen extends StatefulWidget {
@@ -207,8 +207,8 @@ class _StudentActivitiesScreenState extends State<StudentActivitiesScreen> with 
                     Expanded(child: Text(title.toString(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), color: AppColors.primary.withOpacity(0.08)),
-                      child: Text(status.toString(), style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), color: Theme.of(context).colorScheme.primary.withOpacity(0.08)),
+                      child: Text(status.toString(), style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
                     ),
                   ],
                 ),
@@ -246,7 +246,7 @@ class _StudentActivitiesScreenState extends State<StudentActivitiesScreen> with 
                   ),
                 ),
               ),
-              _buildStatusBadge(status),
+              _buildStatusBadge(context, status),
             ],
           ),
           if (activity.generalDescription != null) ...[
@@ -295,41 +295,41 @@ class _StudentActivitiesScreenState extends State<StudentActivitiesScreen> with 
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
+              child: ElevatedButton(
                 onPressed: () => _showRegisterDialog(context, activity),
-                icon: const Icon(Icons.how_to_reg),
-                label: const Text('Đăng ký tham gia'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
                 ),
+                child: const Text('Đăng ký'),
               ),
             ),
           ],
         ],
       ),
     );
+
   }
 
-  Widget _buildStatusBadge(String status) {
-    Color color;
-    String label;
-    
+  Widget _buildStatusBadge(BuildContext context, String status) {
+    Color color = Theme.of(context).colorScheme.primary;
+    String label = 'Không xác định';
+
     switch (status) {
       case 'upcoming':
-        color = AppColors.primary;
+        color = Theme.of(context).colorScheme.primary;
         label = 'Sắp diễn ra';
         break;
       case 'ongoing':
-        color = AppColors.warning;
+        color = Theme.of(context).colorScheme.secondary;
         label = 'Đang diễn ra';
         break;
       case 'completed':
-        color = AppColors.success;
+        color = Theme.of(context).colorScheme.tertiary;
         label = 'Đã hoàn thành';
         break;
       case 'cancelled':
-        color = AppColors.error;
+        color = Theme.of(context).colorScheme.error;
         label = 'Đã hủy';
         break;
       default:

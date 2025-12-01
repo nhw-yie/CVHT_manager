@@ -10,6 +10,7 @@ class Student {
   final String? avatarUrl;
   final int? classId;
   final String? status;
+  final String? position;
 
   Student({
     required this.studentId,
@@ -20,6 +21,7 @@ class Student {
     this.avatarUrl,
     this.classId,
     this.status,
+    this.position,
   });
 
   factory Student.fromJson(Map<String, dynamic> json) {
@@ -38,6 +40,7 @@ class Student {
       avatarUrl: json['avatar_url']?.toString(),
       classId: parseInt(json['class_id']),
       status: json['status']?.toString(),
+      position: json['position']?.toString(),
     );
   }
 
@@ -51,6 +54,7 @@ class Student {
       'avatar_url': avatarUrl,
       'class_id': classId,
       'status': status,
+      'position': position,
     };
   }
 }

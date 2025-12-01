@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../constants/app_colors.dart';
+// import '../../constants/app_colors.dart'; // migrated to Theme colors
 import '../../providers/auth_provider.dart';
 
 class AdvisorHomeScreen extends StatefulWidget {
@@ -91,7 +91,7 @@ class _AdvisorHomeScreenState extends State<AdvisorHomeScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               elevation: 1,
               child: Center(
-                child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(it['icon'] as IconData, size: 28, color: AppColors.primary), const SizedBox(height: 8), Text(it['label'] as String, textAlign: TextAlign.center)]),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(it['icon'] as IconData, size: 28, color: Theme.of(context).colorScheme.primary), const SizedBox(height: 8), Text(it['label'] as String, textAlign: TextAlign.center)]),
               ),
             ),
           );
@@ -115,7 +115,7 @@ class _AdvisorHomeScreenState extends State<AdvisorHomeScreen> {
             final t = _tasks[idx];
             return ListTile(
               title: Text(t['title'] as String),
-              trailing: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(20)), child: Text('${t['count']}', style: const TextStyle(color: Colors.white))),
+              trailing: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(20)), child: Text('${t['count']}', style: const TextStyle(color: Colors.white))),
               onTap: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Mở ${t['title']}'))),
             );
           },
@@ -133,14 +133,14 @@ class _AdvisorHomeScreenState extends State<AdvisorHomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard CVHT'),
-        backgroundColor: AppColors.primary,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         leading: IconButton(icon: const Icon(Icons.menu), onPressed: () => Scaffold.of(context).openDrawer()),
         actions: [
           IconButton(icon: const Icon(Icons.notifications), onPressed: () => context.go('/advisor/notifications')),
           IconButton(icon: const Icon(Icons.person), onPressed: () => context.go('/advisor/profile')),
         ],
       ),
-      drawer: Drawer(child: ListView(padding: EdgeInsets.zero, children: [DrawerHeader(decoration: BoxDecoration(color: AppColors.primary), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.end, children: [Text(name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)), const SizedBox(height: 4), Text(classInCharge, style: const TextStyle(color: Colors.white70))])), ListTile(leading: const Icon(Icons.home), title: const Text('Trang chủ'), onTap: () => Navigator.pop(context)), ListTile(leading: const Icon(Icons.logout), title: const Text('Đăng xuất'), onTap: () { Navigator.pop(context); auth.logout(); })])),
+      drawer: Drawer(child: ListView(padding: EdgeInsets.zero, children: [DrawerHeader(decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.end, children: [Text(name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)), const SizedBox(height: 4), Text(classInCharge, style: const TextStyle(color: Colors.white70))])), ListTile(leading: const Icon(Icons.home), title: const Text('Trang chủ'), onTap: () => Navigator.pop(context)), ListTile(leading: const Icon(Icons.logout), title: const Text('Đăng xuất'), onTap: () { Navigator.pop(context); auth.logout(); })])),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView(

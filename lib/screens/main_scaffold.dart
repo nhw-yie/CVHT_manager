@@ -6,7 +6,7 @@ import '../providers/auth_provider.dart';
 import '../providers/notifications_provider.dart';
 import '../providers/notification_provider_student.dart';
 // screen imports removed; MainScaffold routes use GoRouter to navigate to screens
-import '../constants/app_colors.dart';
+// import '../constants/app_colors.dart'; // replaced with Theme usage
 
 /// MainScaffold provides a BottomNavigationBar with IndexedStack to preserve
 /// state for each tab (keeps scroll position and UI state per tab).
@@ -73,7 +73,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.white,
         currentIndex: currentIndex,
-        selectedItemColor: AppColors.primary,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
         unselectedItemColor: Colors.grey.shade600,
         type: BottomNavigationBarType.fixed,
         onTap: (i) {

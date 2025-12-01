@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../providers/advisor_activities_provider.dart';
-import '../../../constants/app_colors.dart';
+// import '../../../constants/app_colors.dart'; // migrated to Theme usage
 import '../../../widgets/widgets.dart';
 
 class AdvisorActivitiesListScreen extends StatefulWidget {
@@ -77,8 +77,8 @@ class _AdvisorActivitiesListScreenState extends State<AdvisorActivitiesListScree
         // TODO: Implement filtering logic
       },
       backgroundColor: Colors.grey[200],
-      selectedColor: AppColors.primary.withOpacity(0.2),
-      checkmarkColor: AppColors.primary,
+      selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+      checkmarkColor: Theme.of(context).colorScheme.primary,
     );
   }
 
@@ -157,7 +157,7 @@ class _AdvisorActivitiesListScreenState extends State<AdvisorActivitiesListScree
                   ),
                 ),
               ),
-              _buildStatusBadge(status),
+              _buildStatusBadge(context, status),
             ],
           ),
           if (activity.generalDescription != null) ...[
@@ -224,25 +224,25 @@ class _AdvisorActivitiesListScreenState extends State<AdvisorActivitiesListScree
     );
   }
 
-  Widget _buildStatusBadge(String status) {
+  Widget _buildStatusBadge(BuildContext context, String status) {
     Color color;
     String label;
     
     switch (status) {
       case 'upcoming':
-        color = AppColors.primary;
+        color = Theme.of(context).colorScheme.primary;
         label = 'Sắp diễn ra';
         break;
       case 'ongoing':
-        color = AppColors.warning;
+        color = Theme.of(context).colorScheme.secondary;
         label = 'Đang diễn ra';
         break;
       case 'completed':
-        color = AppColors.success;
+        color = Theme.of(context).colorScheme.tertiary;
         label = 'Đã hoàn thành';
         break;
       case 'cancelled':
-        color = AppColors.error;
+        color = Theme.of(context).colorScheme.error;
         label = 'Đã hủy';
         break;
       default:

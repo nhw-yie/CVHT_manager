@@ -2,18 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../constants/app_colors.dart';
+// migrated to use Theme colors
 import '../../../providers/meeting_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/notification_provider_student.dart';
+import '../../../providers/points_provider.dart';
+import '../../../providers/enhanced_points_provider.dart';
 import '../../../models/models.dart';
 
-class StudentHomeScreen extends StatelessWidget {
+class StudentHomeScreen extends StatefulWidget {
   const StudentHomeScreen({Key? key}) : super(key: key);
 
   static const List<_FeatureItem> _features = [
     _FeatureItem('Thông báo', Icons.notifications, '/notifications'),
-    _FeatureItem('Điểm số', Icons.grade, '/scores'),
+    _FeatureItem('Điểm số', Icons.grade, '/student/points'),
     _FeatureItem('Hoạt động', Icons.event, '/activities'),
     _FeatureItem('Họp lớp', Icons.people, '/student/meetings'),
     _FeatureItem('Chat CVHT', Icons.chat, '/messages'),
@@ -21,18 +23,58 @@ class StudentHomeScreen extends StatelessWidget {
   ];
 
   @override
+  State<StudentHomeScreen> createState() => _StudentHomeScreenState();
+}
+
+class _StudentHomeScreenState extends State<StudentHomeScreen> {
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      // Ensure global providers are primed when the home screen appears
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try {
+          final notifProv = Provider.of<NotificationsProvider>(context, listen: false);
+          notifProv.fetchAll();
+          notifProv.fetchUnread();
+        } catch (_) {}
+
+        try {
+          final meetingProv = Provider.of<MeetingProvider>(context, listen: false);
+          // Trigger a fetch but avoid noisy errors if provider isn't available yet
+          meetingProv.fetchMeetings();
+        } catch (_) {}
+        try {
+          final enhancedProv = Provider.of<EnhancedPointsProvider>(context, listen: false);
+          // Ensure we have current semester and points for the home summary
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            try {
+              await enhancedProv.fetchCurrentSemester();
+              if (enhancedProv.selectedSemesterId != null) {
+                await enhancedProv.fetchPointsForSemester(enhancedProv.selectedSemesterId!);
+              } else {
+                await enhancedProv.fetchSemesters();
+                if (enhancedProv.selectedSemesterId != null) {
+                  await enhancedProv.fetchPointsForSemester(enhancedProv.selectedSemesterId!);
+                }
+              }
+            } catch (_) {}
+          });
+        } catch (_) {}
+      });
+      _initialized = true;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<NotificationsProvider>(
-      create:
-          (_) =>
-              NotificationsProvider()
-                ..fetchAll()
-                ..fetchUnread(),
-      child: Scaffold(
-        backgroundColor: AppColors.background,
+    return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           elevation: 0,
-          backgroundColor: AppColors.primary,
+          backgroundColor: Theme.of(context).colorScheme.primary,
           title: const Text('Trang chủ'),
           leading: Builder(
             builder:
@@ -81,7 +123,7 @@ class StudentHomeScreen extends StatelessWidget {
                 return IconButton(
                   onPressed: () => context.go('/student/profile'),
                   icon: CircleAvatar(
-                    backgroundColor: AppColors.primaryVariant,
+                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                     backgroundImage:
                         avatar != null && avatar.isNotEmpty
                             ? NetworkImage(avatar)
@@ -116,7 +158,7 @@ class StudentHomeScreen extends StatelessWidget {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    _buildWelcomeSection(auth.currentUser),
+                    _buildWelcomeSection(auth.currentUser, context),
                     const SizedBox(height: 12),
                     _buildSummaryCard(context),
                     const SizedBox(height: 16),
@@ -129,17 +171,16 @@ class StudentHomeScreen extends StatelessWidget {
             },
           ),
         ),
-      ),
     );
   }
 
-  Widget _buildWelcomeSection(User? user) {
+  Widget _buildWelcomeSection(User? user, BuildContext context) {
     final name = user?.fullName ?? 'Sinh viên';
     final code = user?.userCode ?? 'MSSV';
     final className = 'Lớp A'; // placeholder
 
     return Card(
-      color: AppColors.card,
+      color: Theme.of(context).cardColor,
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -148,7 +189,7 @@ class StudentHomeScreen extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 32,
-              backgroundColor: AppColors.primaryVariant,
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
               child: Text(
                 name.isNotEmpty ? name[0].toUpperCase() : 'S',
                 style: const TextStyle(color: Colors.white, fontSize: 24),
@@ -217,28 +258,41 @@ class StudentHomeScreen extends StatelessWidget {
       ],
     );
 
-    return Card(
-      color: AppColors.card,
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(child: _stat('GPA', '—', color: AppColors.primary)),
-            Expanded(child: _stat('Số tín chỉ', '—')),
-            Expanded(child: _stat('Điểm rèn luyện', '—')),
-            Expanded(child: _stat('Điểm CTXH', '—')),
-          ],
-        ),
-      ),
+    return Consumer2<PointsProvider, EnhancedPointsProvider>(
+      builder: (ctx, p, enhanced, _) {
+        final loading = p.isLoading || enhanced.isLoadingPoints;
+
+        // Prefer enhanced provider's semester-scoped points summary when available
+        final trainingDouble = enhanced.pointsSummary?.totalTrainingPoints ?? p.summary?.totalTrainingPoints ?? 0.0;
+        final socialDouble = enhanced.pointsSummary?.totalSocialPoints ?? p.summary?.totalSocialPoints ?? 0.0;
+
+        final trainingText = loading ? '...' : trainingDouble.toStringAsFixed(0);
+        final socialText = loading ? '...' : socialDouble.toStringAsFixed(1);
+
+        return Card(
+          color: Theme.of(ctx).cardColor,
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(child: _stat('GPA', '—', color: Theme.of(context).colorScheme.primary)),
+                Expanded(child: _stat('Số tín chỉ', '—')),
+                Expanded(child: _stat('Điểm rèn luyện', trainingText)),
+                Expanded(child: _stat('Điểm CTXH', socialText)),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildFeatureGrid(BuildContext context) {
     return Card(
-      color: AppColors.card,
+      color: Theme.of(context).cardColor,
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -250,28 +304,25 @@ class StudentHomeScreen extends StatelessWidget {
           crossAxisSpacing: 8,
           mainAxisSpacing: 8,
           childAspectRatio: 1,
-          children:
-              _features.map((f) {
+            children:
+              StudentHomeScreen._features.map((f) {
                 // For meetings tile, show upcoming count badge and rebuild when meetings change
                 if (f.route == '/student/meetings') {
                   return Consumer<MeetingProvider>(
                     builder: (context, meetingProv, _) {
-                      // fetch meetings once if empty
-                      if (meetingProv.meetings.isEmpty) {
+                      // If we have no meetings and not currently loading, trigger a fetch once
+                      if (meetingProv.meetings.isEmpty && !meetingProv.isLoading) {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           meetingProv.fetchMeetings();
                         });
                       }
 
-                      final upcomingCount =
-                          meetingProv.meetings.where((m) {
-                            final now = DateTime.now();
-                            return m.status == 'scheduled' &&
-                                m.meetingTime.isAfter(now) &&
-                                m.meetingTime.isBefore(
-                                  now.add(const Duration(hours: 24)),
-                                );
-                          }).length;
+                      final now = DateTime.now();
+                      final upcomingCount = meetingProv.meetings.where((m) {
+                        return m.status == 'scheduled' &&
+                            m.meetingTime.isAfter(now) &&
+                            m.meetingTime.isBefore(now.add(const Duration(hours: 24)));
+                      }).length;
 
                       return InkWell(
                         onTap: () => context.go(f.route),
@@ -284,9 +335,8 @@ class StudentHomeScreen extends StatelessWidget {
                               children: [
                                 CircleAvatar(
                                   radius: 24,
-                                  backgroundColor: AppColors.primary
-                                      .withOpacity(0.1),
-                                  child: Icon(f.icon, color: AppColors.primary),
+                                  backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                  child: Icon(f.icon, color: Theme.of(context).colorScheme.primary),
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
@@ -298,34 +348,20 @@ class StudentHomeScreen extends StatelessWidget {
                             ),
                             if (upcomingCount > 0)
                               Positioned(
-                                right: 12,
-                                top: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.redAccent,
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.redAccent.withOpacity(
-                                          0.4,
-                                        ),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 1),
+                                right: 8,
+                                top: 6,
+                                child: CircleAvatar(
+                                  radius: 12,
+                                  backgroundColor: Colors.redAccent,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 1),
+                                    child: Text(
+                                      upcomingCount > 99 ? '99+' : upcomingCount.toString(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                    ],
-                                  ),
-                                  child: Text(
-                                    upcomingCount > 99
-                                        ? '99+'
-                                        : upcomingCount.toString(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ),
@@ -345,8 +381,8 @@ class StudentHomeScreen extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 24,
-                        backgroundColor: AppColors.primary.withOpacity(0.1),
-                        child: Icon(f.icon, color: AppColors.primary),
+                        backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        child: Icon(f.icon, color: Theme.of(context).colorScheme.primary),
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -390,12 +426,8 @@ class StudentHomeScreen extends StatelessWidget {
                             horizontal: 8,
                           ),
                           title: Text(n.title),
-                          subtitle: n.summary != null ? Text(n.summary!) : null,
-                          trailing: Text(
-                            n.createdAt != null
-                                ? _formatDate(n.createdAt!)
-                                : '',
-                          ),
+                          subtitle: Text(n.summary),
+                          trailing: Text(_formatDate(n.createdAt)),
                           onTap: () => prov.markAsRead(n),
                         );
                       }).toList(),

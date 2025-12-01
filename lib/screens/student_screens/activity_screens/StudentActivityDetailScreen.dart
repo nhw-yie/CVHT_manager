@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart';
 import '../../../services/api_service.dart';
 import '../../../models/models.dart';
-import '../../../constants/app_colors.dart';
+// import '../../../constants/app_colors.dart'; // migrated to Theme usage
 import '../../../widgets/widgets.dart';
 import '../../../utils/error_handler.dart';
 
@@ -155,7 +155,7 @@ class _StudentActivityDetailScreenState extends State<StudentActivityDetailScree
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primary.withOpacity(0.7)],
+          colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.primary.withOpacity(0.7)],
         ),
       ),
       child: Column(
@@ -226,7 +226,7 @@ class _StudentActivityDetailScreenState extends State<StudentActivityDetailScree
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: AppColors.primary),
+        Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -313,8 +313,8 @@ class _StudentActivityDetailScreenState extends State<StudentActivityDetailScree
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: pointType == 'ctxh'
-                      ? AppColors.success.withOpacity(0.1)
-                      : AppColors.primary.withOpacity(0.1),
+                      ? Theme.of(context).colorScheme.tertiary.withOpacity(0.1)
+                      : Theme.of(context).colorScheme.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -322,7 +322,7 @@ class _StudentActivityDetailScreenState extends State<StudentActivityDetailScree
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: pointType == 'ctxh' ? AppColors.success : AppColors.primary,
+                    color: pointType == 'ctxh' ? Theme.of(context).colorScheme.tertiary : Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ),
@@ -378,15 +378,15 @@ class _StudentActivityDetailScreenState extends State<StudentActivityDetailScree
     switch (_studentRegistrationStatus) {
       case 'registered':
         statusText = 'Đã đăng ký';
-        statusColor = AppColors.primary;
+        statusColor = Theme.of(context).colorScheme.primary;
         break;
       case 'attended':
         statusText = 'Đã tham gia';
-        statusColor = AppColors.success;
+        statusColor = Theme.of(context).colorScheme.tertiary;
         break;
       case 'absent':
         statusText = 'Vắng mặt';
-        statusColor = AppColors.error;
+        statusColor = Theme.of(context).colorScheme.error;
         break;
       case 'cancelled':
         statusText = 'Đã hủy';
@@ -466,15 +466,15 @@ class _StudentActivityDetailScreenState extends State<StudentActivityDetailScree
         label = 'Sắp diễn ra';
         break;
       case 'ongoing':
-        color = AppColors.warning;
+        color = Theme.of(context).colorScheme.secondary;
         label = 'Đang diễn ra';
         break;
       case 'completed':
-        color = AppColors.success;
+        color = Theme.of(context).colorScheme.tertiary;
         label = 'Đã hoàn thành';
         break;
       case 'cancelled':
-        color = AppColors.error;
+        color = Theme.of(context).colorScheme.error;
         label = 'Đã hủy';
         break;
       default:
@@ -553,9 +553,9 @@ class _StudentActivityDetailScreenState extends State<StudentActivityDetailScree
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đăng ký thành công!'),
-            backgroundColor: AppColors.success,
+          SnackBar(
+            content: const Text('Đăng ký thành công!'),
+            backgroundColor: Theme.of(context).colorScheme.tertiary,
           ),
         );
         

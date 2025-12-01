@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 
 class NotificationsProvider with ChangeNotifier {
   final ApiService _api = ApiService.instance;
@@ -38,12 +39,29 @@ class NotificationsProvider with ChangeNotifier {
       dynamic d = resp['data'] ?? resp['notifications'] ?? [];
       if (d is! List) d = [];
 
-      _allNotifications = d.map<NotificationModel>((e) {
+      // detect new notifications (compare ids)
+      final existingIds = _allNotifications.map((n) => n.notificationId).toSet();
+
+      final parsed = d.map<NotificationModel>((e) {
         final map = e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e);
         final notif = NotificationModel.fromJson(map['notification'] ?? map);
         final isRead = map['is_read'] ?? false;
         return notif.copyWith(isRead: isRead);
       }).toList();
+
+      // show local notification for newly received items
+      final newOnes = parsed.where((n) => !existingIds.contains(n.notificationId)).toList();
+      if (newOnes.isNotEmpty) {
+        final first = newOnes.first;
+        await NotificationService.instance.showNotification(
+          id: first.notificationId,
+          title: 'Thông báo mới',
+          body: first.title ?? 'Bạn có thông báo mới',
+          payload: 'notification:${first.notificationId}',
+        );
+      }
+
+      _allNotifications = parsed;
     } catch (e) {
       errorMessage = e.toString();
     } finally {
@@ -63,11 +81,26 @@ class NotificationsProvider with ChangeNotifier {
       dynamic d = resp['data'] ?? [];
       if (d is! List) d = [];
 
-      _unreadNotifications = d.map<NotificationModel>((e) {
+      final parsed = d.map<NotificationModel>((e) {
         final map = e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e);
         final notif = NotificationModel.fromJson(map['notification'] ?? map);
         return notif.copyWith(isRead: false);
       }).toList();
+
+      // detect newly unread (not present in previous unread list)
+      final prevIds = _unreadNotifications.map((n) => n.notificationId).toSet();
+      final newOnes = parsed.where((n) => !prevIds.contains(n.notificationId)).toList();
+      if (newOnes.isNotEmpty) {
+        final first = newOnes.first;
+        await NotificationService.instance.showNotification(
+          id: first.notificationId,
+          title: 'Thông báo mới',
+          body: first.title ?? 'Bạn có thông báo mới',
+          payload: 'notification:${first.notificationId}',
+        );
+      }
+
+      _unreadNotifications = parsed;
     } catch (e) {
       errorMessage = e.toString();
     } finally {

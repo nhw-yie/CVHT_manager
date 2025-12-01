@@ -3,6 +3,9 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/points_provider.dart';
 
 import '../constants/app_colors.dart';
 
@@ -16,10 +19,7 @@ class PointsManagementScreen extends StatefulWidget {
 class _PointsManagementScreenState extends State<PointsManagementScreen> {
   List<String> semesters = ['Học kỳ 1 - 2024', 'Học kỳ 2 - 2024', 'Học kỳ 1 - 2025'];
   String selectedSemester = 'Học kỳ 1 - 2024';
-
   // Sample aggregated values (in a real app these come from the API)
-  double renLuyen = 82; // /100
-  double ctxh = 8.5; // social activity points
   String classification = 'Khá';
 
   Map<String, double> detailScores = {
@@ -44,6 +44,17 @@ class _PointsManagementScreenState extends State<PointsManagementScreen> {
   void dispose() {
     _complaintCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        final prov = Provider.of<PointsProvider>(context, listen: false);
+        prov.fetchPoints();
+      } catch (_) {}
+    });
   }
 
   Future<void> _pickImage() async {
@@ -113,6 +124,9 @@ class _PointsManagementScreenState extends State<PointsManagementScreen> {
   String _formatDate(DateTime d) => '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
   Widget _buildSummaryCard() {
+    final prov = Provider.of<PointsProvider>(context);
+    final renLuyen = prov.summary?.totalTrainingPoints ?? 0.0;
+    final ctxh = prov.summary?.totalSocialPoints ?? 0.0;
     final percent = (renLuyen / 100).clamp(0.0, 1.0);
 
     return Card(

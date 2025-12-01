@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
 
-import '../../../constants/app_colors.dart';
+// import '../../../constants/app_colors.dart'; // migrated to Theme usage
 import '../../../models/models.dart';
 import '../../../services/api_service.dart';
 import '../../../providers/notification_provider_student.dart';
@@ -109,7 +109,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chi tiết thông báo'),
-        backgroundColor: AppColors.primary,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         leading: BackButton(onPressed: () => Navigator.of(context).pop()),
       ),
       body: isLoading
@@ -132,7 +132,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
             children: [
               CircleAvatar(
                 radius: 28,
-                backgroundColor: AppColors.primary,
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 child: const Icon(Icons.announcement, color: Colors.white),
               ),
               const SizedBox(width: 12),
@@ -158,7 +158,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
               padding: const EdgeInsets.only(top: 8.0),
               child: InkWell(
                 onTap: () => _openLink(n.link!),
-                child: Text('Mở liên kết', style: TextStyle(color: AppColors.primary)),
+                child: Text('Mở liên kết', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
               ),
             ),
           const SizedBox(height: 12),
@@ -225,7 +225,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
               const SizedBox(width: 12),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.success,
+                  backgroundColor: Theme.of(context).colorScheme.tertiary,
                 ),
                 onPressed: () async {
                   final prov =
